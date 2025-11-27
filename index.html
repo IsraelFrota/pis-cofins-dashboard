@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard PIS/COFINS</title>
+	<script type="text/javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      padding: 20px;
+      background: #f4f6f8;
+      color: #333;
+    }
+
+    h1 {
+      margin-bottom: 25px;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+
+    #fileInput {
+      margin-bottom: 25px;
+      padding: 8px;
+      background: white;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      background: white;
+      margin-top: 20px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+
+    th {
+      background: #f0f0f0;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    tr:hover td {
+      background: #fafafa;
+    }
+
+    .kpis {
+      display: flex;
+      gap: 24px;
+      margin: 30px 0;
+      flex-wrap: wrap;
+    }
+
+    .kpi {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      flex: 1;
+      min-width: 260px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      text-align: center;
+      border-left: 5px solid #0077ff;
+    }
+
+    .kpi:nth-child(2) {
+      border-left-color: #ff9900;
+    }
+
+    .kpi:nth-child(3) {
+      border-left-color: #00994d;
+    }
+
+    .kpi h3 {
+      margin: 0 0 12px;
+      font-size: 1.1rem;
+      color: #1a1a1a;
+    }
+
+    .total-credito {
+      display: flex;
+      justify-content: center;
+      flex-direction: row;
+      align-items: center;
+      gap: 25px;
+    }
+
+    .total-credito-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 0.95rem;
+    }
+
+    .total-credito-card strong {
+      margin-top: 4px;
+      font-size: 1.05rem;
+      color: #222;
+    }
+
+    .empresa-box {
+      background: white;
+      padding: 18px;
+      margin-top: 25px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      border-left: 4px solid #555;
+    }
+
+    .empresa-box h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 1.15rem;
+      font-weight: 600;
+    }
+
+    .empresa-box p {
+      margin: 6px 0;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .empresa-table {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Dashboard PIS/COFINS — Créditos e Débitos</h1>
+  <input type="file" id="fileInput" accept=".xlsx" />
+  <div id="summary"></div>
+  <div id="result"></div>
+  <div id="empresas"></div>
+  <script>
+    document.getElementById("fileInput").addEventListener("change", processFile);
+
+    function processFile(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+
+        const ws1 = workbook.Sheets[workbook.SheetNames[0]];
+        const ws2 = workbook.Sheets[workbook.SheetNames[1]];
+        const json1 = XLSX.utils.sheet_to_json(ws1);
+        const json2 = XLSX.utils.sheet_to_json(ws2);
+
+        renderDashboard([...json1, ...json2]);
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    function renderDashboard(data) {
+      renderSummary(data);
+      renderTable(data);
+      renderEmpresas(data);
+    }
+
+		function formatCurrency(value) {
+			if (value === null || value === undefined || value === "") {
+				return value;
+			}
+
+			const number = Number(value);
+
+			if (isNaN(number)) {
+				return value;
+			}
+
+			return number.toLocaleString("pt-BR", {
+				style: "currency",
+				currency: "BRL",
+			});
+		}
+
+
+    function renderSummary(data) {
+      const sum = (key) =>
+        data.reduce((acc, r) => acc + (parseFloat(r[key]) || 0), 0);
+
+      const totalPisCredito = sum("PIS (Crédito)");
+      const totalPisDebito = sum("PIS (Débito)");
+      const totalCofinsCredito = sum("COFINS (Crédito)");
+      const totalCofinsDebito = sum("COFINS (Débito)");
+
+      const totalCredito = totalPisCredito + totalCofinsCredito;
+      const totalDebito = totalPisDebito + totalCofinsDebito;
+      const saldo = totalCredito - totalDebito;
+
+			const saldoPis = totalPisDebito - totalPisCredito;
+			const saldoCofins = totalCofinsDebito - totalCofinsCredito;
+
+      document.getElementById("summary").innerHTML = `
+        <div class="kpis">
+          <div class="kpi">
+            <h3>Total Crédito</h3>
+						<div class="total-credito">
+							<div class="total-credito-card">
+								<label>PIS</label>
+								<strong>${formatCurrency(totalPisCredito)}</strong>
+							</div>
+							<div class="total-credito-card">
+								<label>COFINS</label>
+								<strong>${formatCurrency(totalCofinsCredito)}</strong>
+							</div>
+						</div>
+          </div>
+          <div class="kpi">
+            <h3>Total Débito</h3>
+            <div class="total-credito">
+							<div class="total-credito-card">
+								<label>PIS</label>
+								<strong>${formatCurrency(totalPisDebito)}</strong>
+							</div>
+							<div class="total-credito-card">
+								<label>COFINS</label>
+								<strong>${formatCurrency(totalCofinsDebito)}</strong>
+							</div>
+						</div>
+          </div>
+          <div class="kpi">
+            <h3>Saldo (Débito - Crédito)</h3>
+            <div class="total-credito">
+							<div class="total-credito-card">
+								<label>PIS</label>
+								<strong>${formatCurrency(saldoPis)}</strong>
+							</div>
+							<div class="total-credito-card">
+								<label>COFINS</label>
+								<strong>${formatCurrency(saldoCofins)}</strong>
+							</div>
+						</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderTable(data) {
+      let html = "<h2>Dados da Planilha</h2>";
+      html += "<table><thead><tr>";
+
+      Object.keys(data[0]).forEach((col) => {
+        html += `<th>${col}</th>`;
+      });
+
+      html += "</tr></thead><tbody>";
+
+      data.forEach((row) => {
+        html += "<tr>";
+        Object.values(row).forEach((v) => {
+          html += `<td>${formatCurrency(v)}</td>`;
+        });
+        html += "</tr>";
+      });
+
+      html += "</tbody></table>";
+
+      document.getElementById("result").innerHTML = html;
+    }
+
+    function renderEmpresas(data) {
+      const empresas = {};
+      console.log(data);
+      data.forEach((r) => {
+        if (!r.Empresas) return;
+        
+        if (!empresas[r.Empresas]) {
+          empresas[r.Empresas] = [];
+        }
+        empresas[r.Empresas].push(r);
+      });
+
+      let html = "<h2>Por Empresa</h2>";
+
+      Object.keys(empresas).forEach((empresa) => {
+        const rows = empresas[empresa];
+
+        const sum = (key) =>
+          rows.reduce((acc, r) => acc + (parseFloat(r[key]) || 0), 0);
+
+        const pisCredito = sum("PIS (Crédito)");
+        const cofinsCredito = sum("COFINS (Crédito)");
+        const pisDebito = sum("PIS (Débito)");
+        const cofinsDebito = sum("COFINS (Débito)");
+
+        html += `
+          <div class="empresa-box">
+            <h3>${empresa}</h3>
+            <p><strong>PIS (Crédito):</strong> R$ ${formatCurrency(pisCredito)}</p>
+            <p><strong>PIS (Débito):</strong> R$ ${formatCurrency(pisDebito)}</p>
+            <p><strong>COFINS (Crédito):</strong> R$ ${formatCurrency(cofinsCredito)}</p>
+            <p><strong>COFINS (Débito):</strong> R$ ${formatCurrency(cofinsDebito)}</p>
+            <p><strong>Saldo a pagar (PIS):</strong> R$ ${formatCurrency(pisDebito - pisCredito)}</p>
+						<p><strong>Saldo a pagar (COFINS):</strong> R$ ${formatCurrency(cofinsDebito - cofinsCredito)}</p>	
+          </div>
+        `;
+      });
+
+      document.getElementById("empresas").innerHTML = html;
+    }
+  </script>
+
+</body>
+</html>
