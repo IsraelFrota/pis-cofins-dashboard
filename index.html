@@ -130,6 +130,36 @@
     .empresa-table {
       margin-top: 10px;
     }
+
+    .empresa-box {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    .empresa-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-top: 16px;
+    }
+
+    .empresa-section {
+      background: #f7f7f7;
+      padding: 14px 16px;
+      border-radius: 10px;
+    }
+
+    .empresa-section h4 {
+      margin-bottom: 10px;
+      font-size: 1rem;
+      color: #333;
+      border-left: 4px solid #555;
+      padding-left: 8px;
+    }
+
   </style>
 </head>
 <body>
@@ -193,53 +223,94 @@
       const totalCofinsCredito = sum("COFINS (Crédito)");
       const totalCofinsDebito = sum("COFINS (Débito)");
 
-      const totalCredito = totalPisCredito + totalCofinsCredito;
-      const totalDebito = totalPisDebito + totalCofinsDebito;
-      const saldo = totalCredito - totalDebito;
+      const totalCreditoBase = sum("Base de cálculo (Crédito)");
+      const totalDebitoBase = sum("Base de cálculo (Débito)");
 
-			const saldoPis = totalPisDebito - totalPisCredito;
-			const saldoCofins = totalCofinsDebito - totalCofinsCredito;
+      const saldoPis = totalPisDebito - totalPisCredito;
+      const saldoCofins = totalCofinsDebito - totalCofinsCredito;
+
+      const baseDiff = totalDebitoBase - totalCreditoBase;
+      const basePercent =
+        totalCreditoBase > 0
+          ? ((totalDebitoBase / totalCreditoBase) * 100).toFixed(2)
+          : "0.00";
 
       document.getElementById("summary").innerHTML = `
-        <div class="kpis">
-          <div class="kpi">
-            <h3>Total Crédito</h3>
-						<div class="total-credito">
-							<div class="total-credito-card">
-								<label>PIS</label>
-								<strong>${formatCurrency(totalPisCredito)}</strong>
-							</div>
-							<div class="total-credito-card">
-								<label>COFINS</label>
-								<strong>${formatCurrency(totalCofinsCredito)}</strong>
-							</div>
-						</div>
+        <div>
+          <div class="kpis">
+
+            <div class="kpi">
+              <h3>Visão Geral</h3>
+              <div class="total-credito">
+                <div class="total-credito-card">
+                  <label>Compras de Mercadorias</label>
+                  <strong>${formatCurrency(totalCreditoBase)}</strong>
+                </div>
+                <div class="total-credito-card">
+                  <label>Vendas de Mercadorias</label>
+                  <strong>${formatCurrency(totalDebitoBase)}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="kpi">
+              <h3>Visão Geral</h3>
+              <div class="total-credito">
+                <div class="total-credito-card">
+                  <label>Diferença entre Vendas e Compras)</label>
+                  <strong>${formatCurrency(baseDiff)}</strong>
+                </div>
+                <div class="total-credito-card">
+                  <label>Percentual</label>
+                  <strong>${basePercent}%</strong>
+                </div>
+              </div>
+            </div>
+
           </div>
-          <div class="kpi">
-            <h3>Total Débito</h3>
-            <div class="total-credito">
-							<div class="total-credito-card">
-								<label>PIS</label>
-								<strong>${formatCurrency(totalPisDebito)}</strong>
-							</div>
-							<div class="total-credito-card">
-								<label>COFINS</label>
-								<strong>${formatCurrency(totalCofinsDebito)}</strong>
-							</div>
-						</div>
-          </div>
-          <div class="kpi">
-            <h3>Saldo (Débito - Crédito)</h3>
-            <div class="total-credito">
-							<div class="total-credito-card">
-								<label>PIS</label>
-								<strong>${formatCurrency(saldoPis)}</strong>
-							</div>
-							<div class="total-credito-card">
-								<label>COFINS</label>
-								<strong>${formatCurrency(saldoCofins)}</strong>
-							</div>
-						</div>
+
+          <div class="kpis">
+            <div class="kpi">
+              <h3>Total Crédito</h3>
+              <div class="total-credito">
+                <div class="total-credito-card">
+                  <label>PIS</label>
+                  <strong>${formatCurrency(totalPisCredito)}</strong>
+                </div>
+                <div class="total-credito-card">
+                  <label>COFINS</label>
+                  <strong>${formatCurrency(totalCofinsCredito)}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="kpi">
+              <h3>Total Débito</h3>
+              <div class="total-credito">
+                <div class="total-credito-card">
+                  <label>PIS</label>
+                  <strong>${formatCurrency(totalPisDebito)}</strong>
+                </div>
+                <div class="total-credito-card">
+                  <label>COFINS</label>
+                  <strong>${formatCurrency(totalCofinsDebito)}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="kpi">
+              <h3>Saldo (Débito - Crédito)</h3>
+              <div class="total-credito">
+                <div class="total-credito-card">
+                  <label>PIS</label>
+                  <strong>${formatCurrency(saldoPis)}</strong>
+                </div>
+                <div class="total-credito-card">
+                  <label>COFINS</label>
+                  <strong>${formatCurrency(saldoCofins)}</strong>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       `;
@@ -270,10 +341,10 @@
 
     function renderEmpresas(data) {
       const empresas = {};
-      console.log(data);
+
       data.forEach((r) => {
         if (!r.Empresas) return;
-        
+
         if (!empresas[r.Empresas]) {
           empresas[r.Empresas] = [];
         }
@@ -292,16 +363,47 @@
         const cofinsCredito = sum("COFINS (Crédito)");
         const pisDebito = sum("PIS (Débito)");
         const cofinsDebito = sum("COFINS (Débito)");
+        const baseCalculoCredito = sum("Base de cálculo (Crédito)");
+        const baseCalculoDebito = sum("Base de cálculo (Débito)");
+
+        const baseDiff = baseCalculoDebito - baseCalculoCredito;
+        const basePercent =
+          baseCalculoCredito > 0 && baseCalculoCredito < baseCalculoDebito
+            ? ((baseCalculoDebito / baseCalculoCredito) * 100).toFixed(2)
+            : "0.00";
 
         html += `
           <div class="empresa-box">
             <h3>${empresa}</h3>
-            <p><strong>PIS (Crédito):</strong> R$ ${formatCurrency(pisCredito)}</p>
-            <p><strong>PIS (Débito):</strong> R$ ${formatCurrency(pisDebito)}</p>
-            <p><strong>COFINS (Crédito):</strong> R$ ${formatCurrency(cofinsCredito)}</p>
-            <p><strong>COFINS (Débito):</strong> R$ ${formatCurrency(cofinsDebito)}</p>
-            <p><strong>Saldo a pagar (PIS):</strong> R$ ${formatCurrency(pisDebito - pisCredito)}</p>
-						<p><strong>Saldo a pagar (COFINS):</strong> R$ ${formatCurrency(cofinsDebito - cofinsCredito)}</p>	
+
+            <div class="empresa-grid">
+
+              <!-- PIS -->
+              <div class="empresa-section">
+                <h4>PIS</h4>
+                <p><strong>Crédito:</strong> ${formatCurrency(pisCredito)}</p>
+                <p><strong>Débito:</strong> ${formatCurrency(pisDebito)}</p>
+                <p><strong>Saldo a pagar:</strong> ${formatCurrency(pisDebito - pisCredito)}</p>
+              </div>
+
+              <!-- COFINS -->
+              <div class="empresa-section">
+                <h4>COFINS</h4>
+                <p><strong>Crédito:</strong> ${formatCurrency(cofinsCredito)}</p>
+                <p><strong>Débito:</strong> ${formatCurrency(cofinsDebito)}</p>
+                <p><strong>Saldo a pagar:</strong> ${formatCurrency(cofinsDebito - cofinsCredito)}</p>
+              </div>
+
+              <!-- Base de Cálculo -->
+              <div class="empresa-section">
+                <h4>Base de Cálculo</h4>
+                <p><strong>Compras de mercadorias:</strong> ${formatCurrency(baseCalculoCredito)}</p>
+                <p><strong>vendas de mercadorias:</strong> ${formatCurrency(baseCalculoDebito)}</p>
+                <p><strong>Diferença:</strong> ${formatCurrency(baseDiff)}</p>
+                <p><strong>Percentual:</strong> ${basePercent}%</p>
+              </div>
+
+            </div>
           </div>
         `;
       });
